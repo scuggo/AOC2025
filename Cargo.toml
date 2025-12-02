@@ -1,0 +1,16 @@
+cargo-features = ["codegen-backend"]
+[package]
+name = "aoc_2025"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "day01"
+path = "src/bin/day01/main.rs"
+
+[profile.dev]
+codegen-backend = "cranelift"
+opt-level = 0
+
+[dependencies]
+color-eyre = "0.6.5"
