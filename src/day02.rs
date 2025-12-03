@@ -102,7 +102,7 @@ mod tests {
     }
     #[criterion]
     fn bench_part2(b: &mut Criterion) {
-        let data = data("inputs/day01.txt").unwrap();
+        let data = data("inputs/day02.txt").unwrap();
         b.bench_function("day02-part2", |b| b.iter(|| part2(&data).unwrap()));
     }
 }
