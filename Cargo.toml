@@ -4,13 +4,20 @@ name = "aoc_2025"
 version = "0.1.0"
 edition = "2024"
 
-[[bin]]
-name = "day01"
-path = "src/bin/day01/main.rs"
-
 [profile.dev]
 codegen-backend = "cranelift"
 opt-level = 0
 
+[profile.release]
+codegen-backend = "llvm"
+codegen-units = 1
+lto = true
+panic = "abort"
+strip = "symbols"
+
 [dependencies]
 color-eyre = "0.6.5"
+
+[dev-dependencies]
+criterion = "0.8.0"
+criterion-macro = "0.4.0"
