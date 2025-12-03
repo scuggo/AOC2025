@@ -69,7 +69,7 @@ impl BatteryBank {
                 progress.push(value);
             }
         }
-        println!("value: {progress:?} {}", progress.len());
+        // println!("value: {progress:?} {}", progress.len());
         let mut num = 0;
         for (i, v) in progress.iter().enumerate() {
             num += **v as u64 * 10_u64.pow(progress.len() as u32 - i as u32 - 1);
