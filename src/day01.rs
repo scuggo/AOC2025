@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{self, BufRead, BufReader, Lines, Read},
+    io::{self, BufRead, BufReader},
 };
 
 use color_eyre::{
