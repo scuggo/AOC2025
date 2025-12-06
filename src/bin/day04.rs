@@ -3,7 +3,7 @@ use color_eyre::Report;
 
 fn main() -> Result<(), Report> {
     color_eyre::install()?;
-    let data = day04::data("inputs/day04example.txt")?;
+    let data = day04::data("inputs/day04.txt")?;
     let code1 = day04::part1(&data)?;
     let code2 = day04::part2(&data)?;
     println!("code1: {code1}");
