@@ -90,10 +90,10 @@ impl RangeList {
             };
             let (start, end) = (*start, *end);
 
-            println!("START -- {start}-{end}");
+            // println!("START -- {start}-{end}");
             let has_start = Self::in_range_except2(&ranges, &start, (&start, &end)).copied();
             let has_end = Self::in_range_except2(&ranges, &end, (&start, &end)).copied();
-            println!("{has_start:?}-{has_end:?}");
+            // println!("{has_start:?}-{has_end:?}");
             let mut reset = false;
             match (has_start, has_end) {
                 (Some(new_start), None) if new_start.0 != start => {
@@ -118,9 +118,8 @@ impl RangeList {
                     ranges.remove(index);
                     reset = true;
                 }
-                (None, None) => {}
                 _ => {
-                    panic!("unhandled")
+                    // panic!("unhandled")
                 }
             }
             if reset {
@@ -128,12 +127,13 @@ impl RangeList {
             } else {
                 index += 1;
             }
-            println!("END -- {start}-{end} -- {ranges:?}");
+            // println!("END -- {start}-{end} -- {ranges:?}");
         }
 
-        println!("{ranges:?}");
+        // println!("{ranges:?}");
 
         ranges.sort();
+        ranges.dedup();
         ranges
     }
 }
@@ -147,15 +147,11 @@ pub fn part1(data: &RangeList) -> Result<u64, Report> {
 }
 
 pub fn part2(data: &RangeList) -> Result<u64, Report> {
-    let mut data = RangeList {
-        ranges: vec![(1, 2), (3, 5), (10, 14), (16, 20), (12, 18)],
-        data: Vec::new(),
-    };
     let ranges = data.dedup_ranges();
     let mut total = 0;
     for (start, end) in &ranges {
         let v = end - start + 1;
-        println!("{start}-{end} => {v}");
+        // println!("{start}-{end} => {v}");
         total += v;
     }
     Ok(total as u64)
@@ -176,11 +172,11 @@ mod tests {
     #[criterion]
     fn bench_part1(b: &mut Criterion) {
         let data = data("inputs/day05.txt").unwrap();
-        b.bench_function("day04-part1", |b| b.iter(|| part1(&data).unwrap()));
+        b.bench_function("day05-part1", |b| b.iter(|| part1(&data).unwrap()));
     }
     #[criterion]
     fn bench_part2(b: &mut Criterion) {
         let data = data("inputs/day05.txt").unwrap();
-        b.bench_function("day04-part2", |b| b.iter(|| part2(&data).unwrap()));
+        b.bench_function("day05-part2", |b| b.iter(|| part2(&data).unwrap()));
     }
 }
