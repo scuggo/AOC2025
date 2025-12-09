@@ -12,6 +12,21 @@ enum Symbol {
     Mul,
 }
 
+#[derive(Debug)]
+enum Either {
+    Num(usize),
+    Symbol(Symbol),
+}
+
+impl Either {
+    fn is_symbol(&self) -> bool {
+        matches!(self, Either::Symbol(_))
+    }
+    fn is_num(&self) -> bool {
+        matches!(self, Either::Num(_))
+    }
+}
+
 impl Symbol {
     fn apply(&self, data: &Vec<usize>) -> usize {
         let mut val = 0;
@@ -28,44 +43,63 @@ impl Symbol {
 
 #[derive(Debug)]
 pub struct MultGrid {
-    data: Vec<usize>,
+    data: Vec<Vec<usize>>,
     symbols: Vec<Symbol>,
     width: usize,
     num_height: usize,
-    sym_height: usize,
 }
 
 impl<R: BufRead> TryFrom<Lines<R>> for MultGrid {
     type Error = Report;
     fn try_from(value: Lines<R>) -> Result<Self, Self::Error> {
+        let lines = value.collect::<Result<Vec<String>, _>>()?;
         let mut data = Vec::new();
         let mut symbols = Vec::new();
-        let mut width = 0;
+        let mut num_height = 0;
+        let mut widths = Vec::new();
+        let parts: Vec<char> = lines.last().unwrap().chars().collect();
+        let mut length = 0;
+        for c in parts {
+            if c.is_ascii_digit() || c.is_whitespace() {
+                length += 1;
+            } else {
+                symbols.push(match c {
+                    '+' => Symbol::Add,
+                    '*' => Symbol::Mul,
+                    v => {
+                        panic!("unexpected symbol: {v:?}")
+                    }
+                });
+                widths.push(length);
+                length = 0;
+            }
+        }
+        widths.remove(0);
+        widths.push(length + 1);
 
-        for line in value {
-            let line = line?;
-            let parts = line.split(' ').collect::<Vec<&str>>();
-            width = parts.len();
-            for char in parts {
-                println!("char: {char:?}");
-                let num = char.parse::<usize>();
-                match (char, num) {
-                    (_, Ok(num)) => {
-                        data.push(num);
-                    }
-                    ("", _) => data.push(0),
-                    ("+", _) => symbols.push(Symbol::Add),
-                    ("*", _) => symbols.push(Symbol::Mul),
-                    _ => {
-                        panic!("FUCK");
-                    }
-                }
+        for line in lines.iter().rev().skip(1).rev() {
+            let parts: Vec<char> = line.chars().collect();
+            num_height += 1;
+            let mut widths_index = 0;
+            for w in &widths {
+                let part = parts[widths_index..widths_index + *w]
+                    .iter()
+                    .map(|v| {
+                        if v.is_ascii_digit() {
+                            v.to_digit(10).unwrap() as usize
+                        } else {
+                            0
+                        }
+                    })
+                    .collect::<Vec<usize>>();
+
+                data.push(part);
+                widths_index += w + 1;
             }
         }
         Ok(Self {
-            width,
-            num_height: data.len() / width,
-            sym_height: symbols.len() / width,
+            width: widths.len(),
+            num_height,
             data,
             symbols,
         })
@@ -73,10 +107,10 @@ impl<R: BufRead> TryFrom<Lines<R>> for MultGrid {
 }
 
 impl MultGrid {
-    pub fn get_num_col(&self, index: usize) -> Vec<usize> {
+    pub fn get_num_col(&self, index: usize) -> Vec<&Vec<usize>> {
         (0..self.num_height)
             .map(|x| (x * self.width) + index)
-            .map(|i| self.data[i])
+            .map(|i| &self.data[i])
             .collect()
     }
 }
@@ -84,7 +118,20 @@ impl MultGrid {
 pub fn part1(data: &MultGrid) -> Result<u64, Report> {
     let mut total = 0;
     for i in 0..data.width {
-        let col = data.get_num_col(i);
+        let col = data
+            .get_num_col(i)
+            .into_iter()
+            .map(|v| v.iter().filter(|v| v != &&0).collect::<Vec<&usize>>())
+            .collect::<Vec<Vec<&usize>>>();
+        let col = col
+            .iter()
+            .map(|val| {
+                val.iter()
+                    .enumerate()
+                    .map(|(i, v)| **v * 10_usize.pow(val.len() as u32 - i as u32 - 1))
+                    .sum::<usize>()
+            })
+            .collect::<Vec<usize>>();
         let sym = &data.symbols[i];
         let val = sym.apply(&col);
         total += val;
@@ -93,58 +140,31 @@ pub fn part1(data: &MultGrid) -> Result<u64, Report> {
 }
 
 pub fn part2(data: &MultGrid) -> Result<u64, Report> {
-    println!("{data:?}");
-    // let ranges = data.dedup_ranges();
     let mut total = 0;
     for i in 0..data.width {
-        let mut col = data
-            .get_num_col(i)
-            .into_iter()
-            .map(|v| {
-                let len = (v.checked_ilog10().unwrap_or(0) + 1) as usize;
-                let mut digits = vec![0; len];
-                let mut temp = v;
-                for i in 1..=len {
-                    digits[len - i] = temp % 10;
-                    temp /= 10;
-                }
-                digits
+        let mut matrix = data.get_num_col(i);
+        let rows = matrix.len();
+        let cols = matrix[0].len();
+
+        let new = (0..cols)
+            .rev()
+            .map(|col| (0..rows).map(|row| matrix[row][col]).collect::<Vec<_>>())
+            .map(|v| v.into_iter().filter(|v| v != &0).collect::<Vec<usize>>())
+            .collect::<Vec<Vec<_>>>();
+
+        let new = new
+            .iter()
+            .map(|val| {
+                val.iter()
+                    .enumerate()
+                    .map(|(i, v)| *v * 10_usize.pow(val.len() as u32 - i as u32 - 1))
+                    .sum::<usize>()
             })
-            .collect::<Vec<Vec<usize>>>();
-        println!("{col:?}");
-        let mut vals = Vec::new();
-        while !col.is_empty() {
-            let mut val = Vec::new();
-            for c in col.iter_mut() {
-                let v = c.pop();
-                if let Some(v) = v {
-                    println!("{v}");
-                    val.push(v);
-                }
-            }
-
-            println!("...");
-            col.retain(|v| !v.is_empty());
-
-            let num = val
-                .iter()
-                .enumerate()
-                .map(|(i, v)| v * 10_usize.pow(val.len() as u32 - i as u32 - 1))
-                .sum::<usize>();
-            vals.push(num);
-        }
-
+            .collect::<Vec<usize>>();
         let sym = &data.symbols[i];
-        let val = sym.apply(&vals);
-
-        println!("{col:?} {sym:?} {val}");
+        let val = sym.apply(&new);
         total += val;
     }
-    // for (start, end) in &ranges {
-    //     let v = end - start + 1;
-    //     // println!("{start}-{end} => {v}");
-    //     total += v;
-    // }
     Ok(total as u64)
 }
 pub fn data(filepath: &str) -> Result<MultGrid, Report> {
